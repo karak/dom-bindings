@@ -19,13 +19,15 @@
   const SIMPLE = 2;
   const TAG = 3;
   const SLOT = 4;
+  const VIRTUAL = 5;
 
   var bindingTypes = {
     EACH,
     IF,
     SIMPLE,
     TAG,
-    SLOT
+    SLOT,
+    VIRTUAL
   };
 
   /* get rid of the @ungap/essential-map polyfill */
@@ -1300,12 +1302,62 @@
     }
   }
 
+  const VirtualBinding = Object.seal({
+    // dynamic binding properties
+    node: null,
+    name: null,
+    template: null,
+
+    // API methods
+    mount(scope, parentScope) {
+      if (this.template) {
+        this.template = this.template.clone();
+        this.template.mount(this.node, scope, parentScope);
+      }
+      unwrap(this.node);
+
+      this.node.parentNode.removeChild(this.node);
+
+      return this
+    },
+    update(scope, parentScope) {
+      if (this.template) {
+        this.template.update(scope, parentScope);
+      }
+
+      return this
+    },
+    unmount(scope, parentScope) {
+      if (this.template) {
+        this.template.unmount(scope, parentScope, false);
+      }
+
+      return this
+    }
+  });
+
+  function unwrap(node) {
+    if (node.firstChild) {
+      node.parentNode.insertBefore(node.firstChild, node);
+      unwrap(node);
+    }
+  }
+
+  function createVirtual(node, { template }) {
+    return {
+      ...VirtualBinding,
+      node,
+      template
+    }
+  }
+
   var bindings = {
     [IF]: create$1,
     [SIMPLE]: create$3,
     [EACH]: create,
     [TAG]: create$4,
-    [SLOT]: createSlot
+    [SLOT]: createSlot,
+    [VIRTUAL]: createVirtual
   };
 
   /**
