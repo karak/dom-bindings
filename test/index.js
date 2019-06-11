@@ -18,6 +18,7 @@ describe('dom-bindings', () => {
     require('./bindings/simple.spec')
     require('./bindings/tag.spec')
     require('./bindings/slot.spec')
+    require('./bindings/virtual.spec')
   })
 
   describe('expressions', () => {
