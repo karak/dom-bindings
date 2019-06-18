@@ -9,18 +9,18 @@ function createEmptyTemplate() {
 }
 
 function createSimpleTemplate() {
-  return template('<virtual expr0><!----></virtual>', [{
+  return template('<virtual expr0><p expr1><!----></b></virtual>', [{
     type: bindingTypes.VIRTUAL,
     selector: '[expr0]',
-    template: template('<p expr0><!----></b>', [{
-      selector: '[expr0]',
+    bindings: [{
+      selector: '[expr1]',
       expressions: [
         {
           type: expressionTypes.TEXT, childNodeIndex: 0,
           evaluate: scope => scope.text
         }
       ]
-    }])
+    }]
   }])
 }
 
@@ -56,5 +56,4 @@ describe('virtual bindings', () => {
 
     el.unmount()
   })
-
 })

@@ -1305,49 +1305,114 @@
   const VirtualBinding = Object.seal({
     // dynamic binding properties
     node: null,
-    name: null,
-    template: null,
+    start: null,
+    end: null,
+    bindings: null,
 
     // API methods
     mount(scope, parentScope) {
-      if (this.template) {
-        this.template = this.template.clone();
-        this.template.mount(this.node, scope, parentScope);
-      }
-      unwrap(this.node);
+      // marking around the node
+      mark.apply(this);
 
-      this.node.parentNode.removeChild(this.node);
+      if (this.bindings) {
+        this.bindings.forEach(b => b.mount(scope, parentScope));
+      }
+
+      if (this.node.parentNode) {
+        unwrap.apply(this);
+        this.node.parentNode.removeChild(this.node);
+      }
 
       return this
     },
     update(scope, parentScope) {
-      if (this.template) {
-        this.template.update(scope, parentScope);
+      rewrap.apply(this);
+      this.end.parentNode.insertBefore(this.node, this.end);
+
+      if (this.bindings) {
+        this.bindings.forEach(b => b.update(scope, parentScope));
+      }
+
+      if (this.node.parentNode) {
+        unwrap.apply(this);
+        this.node.parentNode.removeChild(this.node);
       }
 
       return this
     },
     unmount(scope, parentScope) {
-      if (this.template) {
-        this.template.unmount(scope, parentScope, false);
+      rewrap.apply(this);
+
+      if (this.bindings) {
+        this.bindings.forEach(b => b.unmount(scope, parentScope));
       }
+
+      // remove the marking around the node
+      unmark.apply(this);
 
       return this
     }
   });
 
-  function unwrap(node) {
-    if (node.firstChild) {
-      node.parentNode.insertBefore(node.firstChild, node);
-      unwrap(node);
-    }
+  /**
+   * Mark the node by a pair of comment nodes.
+   *
+   * @return {undefined}
+   */
+  function mark() {
+    const { node, start, end } = this;
+    node.parentNode.insertBefore(start, node);
+    node.parentNode.insertBefore(end, node.nextSibling);
+    if (node.parentNode !== start.parentNode || node.parentNode !== end.parentNode) throw new Error('node must have the same parent')
   }
 
-  function createVirtual(node, { template }) {
+  function unmark() {
+    const { start, end } = this;
+    start.parentNode.removeChild(start);
+    end.parentNode.removeChild(end);
+  }
+
+  function unwrap() {
+    const {node} = this;
+
+    function liftup() {
+      if (!node.firstChild) {
+        return
+      }
+      node.parentNode.insertBefore(node.firstChild, node);
+    }
+    liftup();
+  }
+
+  function rewrap() {
+    const {node, start, end} = this;
+
+    function liftdown() {
+      if (start.nextSibling === end) {
+        return
+      }
+      node.appendChild(start.nextSibling);
+      liftdown();
+    }
+
+    liftdown();
+  }
+
+  function createCompositeBindings(node, bindings) {
+    return bindings.map(b => create$5(node, b))
+  }
+
+  function createVirtual(node, { bindings }) {
+
+    const start = node.ownerDocument.createComment('virtual');
+    const end = node.ownerDocument.createComment('/virtual');
+
     return {
       ...VirtualBinding,
       node,
-      template
+      start,
+      end,
+      bindings: bindings && createCompositeBindings(node, bindings)
     }
   }
 
